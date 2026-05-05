@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}Abonnements — Gym Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📋 {{ 'Mes abonnements' if current_user.est_membre else 'Abonnements' }}</h2>
+    {% if not current_user.est_membre %}
+    <a href="{{ url_for('abonnements.ajouter') }}" class="btn btn-dark">
+        + Nouvel abonnement
+    </a>
+    {% endif %}
+</div>
+
+<!-- Filtres -->
+<!-- Filtres (admin et secretaire uniquement) -->
+{% if not current_user.est_membre %}
+<div class="card p-3 mb-4">
+    <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Rechercher</label>
+            <input type="text" name="q" class="form-control"
+                   placeholder="Nom, prenom, telephone..."
+                   value="{{ recherche }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Statut</label>
+            <select name="statut" class="form-select">
+                <option value="">Tous</option>
+                <option value="actif" {{ 'selected' if filtre_statut == 'actif' }}>
+                    Actif
+                </option>
+                <option value="bientot" {{ 'selected' if filtre_statut == 'bientot' }}>
+                    Expire bientot
+                </option>
+                <option value="expire" {{ 'selected' if filtre_statut == 'expire' }}>
+                    Expire
+                </option>
+                <option value="annule" {{ 'selected' if filtre_statut == 'annule' }}>
+                    Annule
+                </option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-select">
+                <option value="">Tous</option>
+                <option value="forfait" {{ 'selected' if filtre_type == 'forfait' }}>
+                    Forfait
+                </option>
+                <option value="journalier" {{ 'selected' if filtre_type == 'journalier' }}>
+                    Journalier
+                </option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Acces</label>
+            <select name="acces" class="form-select">
+                <option value="">Tous</option>
+                <option value="salle" {{ 'selected' if filtre_acces == 'salle' }}>
+                    Salle
+                </option>
+                <option value="fitness" {{ 'selected' if filtre_acces == 'fitness' }}>
+                    Fitness
+                </option>
+                <option value="salle+fitness"
+                        {{ 'selected' if filtre_acces == 'salle+fitness' }}>
+                    Salle + Fitness
+                </option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-dark w-100">Filtrer</button>
+        </div>
+        {% if recherche or filtre_statut or filtre_type or filtre_acces %}
+        <div class="col-md-1">
+            <a href="{{ url_for('abonnements.liste') }}"
+               class="btn btn-outline-secondary w-100">✕</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endif %}
+
+<!-- Tableau -->
+<table class="table table-hover table-bordered">
+    <thead>
+        <tr>
+            <th>Membre</th>
+            <th>Type</th>
+            <th>Acces</th>
+            <th>Montant total</th>
+            <th>Paye</th>
+            <th>Reste</th>
+            <th>Expire le</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ab in abonnements.items %}
+        <tr class="{{ 'table-warning' if ab.expire_bientot else 'table-danger' if ab.est_expire else '' }}">
+            <td>{{ ab.membre.prenom }} {{ ab.membre.nom }}</td>
+            <td>
+                {% if ab.type_abonnement == 'journalier' %}
+                    <span class="badge bg-secondary">Journalier</span>
+                {% else %}
+                    <span class="badge bg-dark">{{ ab.nombre_mois }} mois</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if ab.type_acces == 'salle' %}
+                    <span class="badge bg-primary">Salle</span>
+                {% elif ab.type_acces == 'fitness' %}
+                    <span class="badge bg-info text-dark">Fitness</span>
+                {% else %}
+                    <span class="badge bg-success">Salle + Fitness</span>
+                {% endif %}
+            </td>
+            <td>{{ "{:,.0f}".format(ab.montant_total) }} FCFA</td>
+            <td>{{ "{:,.0f}".format(ab.montant_paye) }} FCFA</td>
+            <td>
+                {% if ab.reste_a_payer > 0 %}
+                    <span class="text-danger fw-bold">
+                        {{ "{:,.0f}".format(ab.reste_a_payer) }} FCFA
+                    </span>
+                {% else %}
+                    <span class="text-success fw-bold">Solde ✅</span>
+                {% endif %}
+            </td>
+            <td>{{ ab.date_fin.strftime('%d/%m/%Y') }}</td>
+            <td>
+                {% if ab.statut == 'annule' %}
+                    <span class="badge bg-secondary">Annule</span>
+                {% elif ab.est_expire %}
+                    <span class="badge bg-danger">Expire</span>
+                {% elif ab.expire_bientot %}
+                    <span class="badge bg-warning text-dark">
+                        ⚠️ {{ ab.jours_restants }}j
+                    </span>
+                {% else %}
+                    <span class="badge bg-success">Actif</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{{ url_for('abonnements.detail', id=ab.id) }}"
+                class="btn btn-sm btn-outline-dark">👁️</a>
+                {% if not current_user.est_membre %}                    
+                    {% if ab.est_expire or ab.statut == 'annule' %}
+                    <a href="{{ url_for('abonnements.ajouter', membre_id=ab.membre_id) }}"
+                    class="btn btn-sm btn-outline-success">🔄</a>
+                {% endif %}
+            {% endif %}
+        </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="9" class="text-center text-muted">
+                Aucun abonnement trouve.
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+{% if abonnements.pages > 1 %}
+<nav>
+    <ul class="pagination justify-content-center">
+        <li class="page-item {{ 'disabled' if not abonnements.has_prev }}">
+            <a class="page-link" href="{{ url_for('abonnements.liste',
+               page=abonnements.prev_num, q=recherche, statut=filtre_statut,
+               type=filtre_type, acces=filtre_acces) }}">←</a>
+        </li>
+        {% for p in abonnements.iter_pages(left_edge=1, right_edge=1,
+                                           left_current=2, right_current=2) %}
+            {% if p %}
+            <li class="page-item {{ 'active' if p == abonnements.page }}">
+                <a class="page-link" href="{{ url_for('abonnements.liste',
+                   page=p, q=recherche, statut=filtre_statut,
+                   type=filtre_type, acces=filtre_acces) }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">…</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {{ 'disabled' if not abonnements.has_next }}">
+            <a class="page-link" href="{{ url_for('abonnements.liste',
+               page=abonnements.next_num, q=recherche, statut=filtre_statut,
+               type=filtre_type, acces=filtre_acces) }}">→</a>
+        </li>
+    </ul>
+</nav>
+<p class="text-center text-muted small">
+    {{ abonnements.total }} abonnement(s) —
+    Page {{ abonnements.page }} / {{ abonnements.pages }}
+</p>
+{% endif %}
+{% endblock %}

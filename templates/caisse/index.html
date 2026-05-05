@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}Caisse — Gym Manager{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">💰 Caisse</h2>
+{% if credit_sms is defined %}
+<div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span>📱 Credit SMS Aqilas disponible</span>
+    <strong>{{ credit_sms }} XOF</strong>
+</div>
+{% endif %}
+<!-- Solde global -->
+<div class="card bg-dark text-white p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <p class="mb-1 opacity-75">Solde global (toutes periodes)</p>
+            <h2 class="fw-bold mb-0">{{ "{:,.0f}".format(solde_global) }} FCFA</h2>
+        </div>
+        <div class="col-auto">
+            <span style="font-size: 3rem;">🏦</span>
+        </div>
+    </div>
+</div>
+
+<!-- Soldes par mode de paiement -->
+{% if soldes_modes %}
+<h5 class="mb-3">📊 Soldes par mode de paiement</h5>
+<div class="row g-3 mb-4">
+    {% for mode, solde in soldes_modes.items() %}
+    <div class="col-md-3">
+        <div class="card text-center p-3 border-success">
+            <p class="text-muted mb-1 small">{{ mode }}</p>
+            <h5 class="fw-bold text-success mb-0">
+                {{ "{:,.0f}".format(solde) }} FCFA
+            </h5>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Stats periode -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success text-center p-3">
+            <p class="mb-1">Entrees ({{ titre_periode }})</p>
+            <h3 class="fw-bold mb-0">{{ "{:,.0f}".format(total_entrees) }} FCFA</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger text-center p-3">
+            <p class="mb-1">Sorties ({{ titre_periode }})</p>
+            <h3 class="fw-bold mb-0">{{ "{:,.0f}".format(total_sorties) }} FCFA</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white {{ 'bg-success' if solde_periode >= 0 else 'bg-danger' }} text-center p-3">
+            <p class="mb-1">Solde net ({{ titre_periode }})</p>
+            <h3 class="fw-bold mb-0">{{ "{:,.0f}".format(solde_periode) }} FCFA</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card p-3 mb-4">
+    <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Periode</label>
+            <select name="periode" class="form-select" onchange="this.form.submit()">
+                <option value="jour" {{ 'selected' if periode == 'jour' }}>
+                    Aujourd'hui
+                </option>
+                <option value="mois" {{ 'selected' if periode == 'mois' }}>
+                    Ce mois
+                </option>
+                <option value="annee" {{ 'selected' if periode == 'annee' }}>
+                    Cette annee
+                </option>
+                <option value="custom" {{ 'selected' if periode == 'custom' }}>
+                    Periode personnalisee
+                </option>
+            </select>
+        </div>
+        {% if periode == 'custom' %}
+        <div class="col-md-3">
+            <label class="form-label">Date debut</label>
+            <input type="date" name="date_debut" class="form-control"
+                   value="{{ date_debut_custom }}" max="{{ aujourd_hui }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Date fin</label>
+            <input type="date" name="date_fin" class="form-control"
+                   value="{{ date_fin_custom }}" max="{{ aujourd_hui }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-dark w-100">Filtrer</button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Historique -->
+<h5 class="mb-3">📋 Historique des operations</h5>
+<table class="table table-hover table-bordered">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Membre</th>
+            <th>Mode</th>
+            <th>Motif</th>
+            <th>Montant</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for op in operations %}
+        <tr class="{{ 'table-success' if op.type_operation == 'entree' else 'table-danger' }}">
+            <td>{{ op.date_operation.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>
+                {% if op.type_operation == 'entree' %}
+                    <span class="badge bg-success">➕ Entree</span>
+                {% else %}
+                    <span class="badge bg-danger">➖ Sortie</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if op.membre %}
+                    {{ op.membre.prenom }} {{ op.membre.nom }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if op.mode_paiement %}
+                    <span class="badge bg-secondary">{{ op.mode_label }}</span>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>{{ op.motif }}</td>
+            <td>
+                <strong class="{{ 'text-success' if op.type_operation == 'entree' else 'text-danger' }}">
+                    {{ '+' if op.type_operation == 'entree' else '-' }}
+                    {{ "{:,.0f}".format(op.montant) }} FCFA
+                </strong>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" class="text-center text-muted">
+                Aucune operation pour cette periode.
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

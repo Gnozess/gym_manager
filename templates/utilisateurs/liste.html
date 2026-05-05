@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% block title %}Utilisateurs — Gym Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>👤 Utilisateurs</h2>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAjouter">
+        + Nouvel utilisateur
+    </button>
+</div>
+
+<table class="table table-hover table-bordered">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Membre lie</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in utilisateurs %}
+        <tr>
+            <td><strong>{{ u.nom }}</strong></td>
+            <td>{{ u.email }}</td>
+            <td>
+                {% if u.role == 'admin' %}
+                    <span class="badge bg-danger">Administrateur</span>
+                {% elif u.role == 'secretaire' %}
+                    <span class="badge bg-primary">Secretaire</span>
+                {% else %}
+                    <span class="badge bg-secondary">Membre</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.membre_id %}
+                    {% set m = u.membre_id %}
+                    <span class="badge bg-info text-dark">Lie</span>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if u.actif %}
+                    <span class="badge bg-success">Actif</span>
+                {% else %}
+                    <span class="badge bg-secondary">Inactif</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.id != current_user.id %}
+                <button class="btn btn-sm btn-outline-dark"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalModifier"
+                        data-id="{{ u.id }}"
+                        data-nom="{{ u.nom }}"
+                        data-email="{{ u.email }}"
+                        data-role="{{ u.role }}"
+                        data-actif="{{ u.actif }}"
+                        data-membre-id="{{ u.membre_id or '' }}">
+                    ✏️
+                </button>
+                <form method="POST"
+                      action="{{ url_for('utilisateurs.supprimer', id=u.id) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('Supprimer cet utilisateur ?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                </form>
+                {% else %}
+                <span class="text-muted small">Votre compte</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" class="text-center text-muted">Aucun utilisateur.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<!-- Modal Ajouter -->
+<div class="modal fade" id="modalAjouter" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">➕ Nouvel utilisateur</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('utilisateurs.ajouter') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nom complet</label>
+                        <input type="text" name="nom" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" name="mot_de_passe"
+                               class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" class="form-select"
+                                id="add_role" required>
+                            {% for value, label in roles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="add_bloc_membre">
+                        <label class="form-label">Lier a un membre (optionnel)</label>
+                        <select name="membre_id" class="form-select">
+                            <option value="">-- Aucun --</option>
+                            {% for m in membres_sans_compte %}
+                            <option value="{{ m.id }}">
+                                {{ m.prenom }} {{ m.nom }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-dark">Creer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Modifier -->
+<div class="modal fade" id="modalModifier" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">✏️ Modifier l'utilisateur</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="formModifier">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nom complet</label>
+                        <input type="text" name="nom" id="mod_nom"
+                               class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" id="mod_email"
+                               class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nouveau mot de passe
+                            <small class="text-muted">(laisser vide = inchange)</small>
+                        </label>
+                        <input type="password" name="mot_de_passe" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" class="form-select" id="mod_role">
+                            {% for value, label in roles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="mod_bloc_membre">
+                        <label class="form-label">Lier a un membre</label>
+                        <select name="membre_id" class="form-select" id="mod_membre_id">
+                            <option value="">-- Aucun --</option>
+                            {% for m in membres_sans_compte %}
+                            <option value="{{ m.id }}">
+                                {{ m.prenom }} {{ m.nom }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="actif"
+                               class="form-check-input" id="mod_actif">
+                        <label class="form-check-label" for="mod_actif">
+                            Compte actif
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-dark">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Modal modifier — remplir les champs
+document.getElementById('modalModifier').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('mod_nom').value = btn.getAttribute('data-nom');
+    document.getElementById('mod_email').value = btn.getAttribute('data-email');
+    document.getElementById('mod_role').value = btn.getAttribute('data-role');
+    document.getElementById('mod_actif').checked = btn.getAttribute('data-actif') === 'True';
+    document.getElementById('mod_membre_id').value = btn.getAttribute('data-membre-id');
+    document.getElementById('formModifier').action =
+        '/utilisateurs/modifier/' + btn.getAttribute('data-id');
+    majBlocMembre('mod_role', 'mod_bloc_membre');
+});
+
+// Afficher/masquer lien membre selon le role
+function majBlocMembre(selectId, blocId) {
+    const role = document.getElementById(selectId).value;
+    document.getElementById(blocId).style.display =
+        role === 'membre' ? 'block' : 'none';
+}
+
+document.getElementById('add_role').addEventListener('change', function() {
+    majBlocMembre('add_role', 'add_bloc_membre');
+});
+document.getElementById('mod_role').addEventListener('change', function() {
+    majBlocMembre('mod_role', 'mod_bloc_membre');
+});
+
+// Init au chargement
+majBlocMembre('add_role', 'add_bloc_membre');
+</script>
+{% endblock %}

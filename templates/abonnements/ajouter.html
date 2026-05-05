@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% block title %}Nouvel abonnement{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>➕ Nouvel abonnement</h2>
+    <a href="{{ url_for('abonnements.liste') }}" class="btn btn-outline-secondary">← Retour</a>
+</div>
+
+{% if est_reabonnement and abonnement_en_cours %}
+<div class="alert alert-info">
+    <strong>Reabonnement :</strong> Ce membre a un abonnement actif jusqu'au
+    <strong>{{ abonnement_en_cours.date_fin.strftime('%d/%m/%Y') }}</strong>.
+    Le nouvel abonnement commencera a partir de cette date.
+</div>
+{% endif %}
+
+<div class="card p-4 shadow-sm">
+    <form method="POST" id="form-abonnement">
+        <div class="row g-3">
+
+            <!-- Recherche dynamique membre -->
+            <div class="col-md-6">
+                <label class="form-label">Membre</label>
+                <div class="position-relative">
+                    <input type="text" id="recherche_membre" class="form-control"
+                           placeholder="Rechercher par nom, prenom ou telephone..."
+                           autocomplete="off"
+                           value="{{ membre_selectionne.prenom + ' ' + membre_selectionne.nom if membre_selectionne else '' }}">
+                    <input type="hidden" name="membre_id" id="membre_id"
+                           value="{{ membre_selectionne.id if membre_selectionne else '' }}"
+                           required>
+                    <div id="suggestions_membres"
+                         class="list-group position-absolute w-100"
+                         style="z-index:1000; display:none; max-height:200px; overflow-y:auto;">
+                    </div>
+                </div>
+                <small class="text-muted">Tapez au moins 2 caracteres pour rechercher.</small>
+            </div>
+
+            <!-- Type abonnement -->
+            <div class="col-md-6">
+                <label class="form-label">Type d'abonnement</label>
+                <div class="d-flex gap-4 mt-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio"
+                               name="type_abonnement" id="type_forfait"
+                               value="forfait" checked>
+                        <label class="form-check-label" for="type_forfait">
+                            Forfait mensuel
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio"
+                               name="type_abonnement" id="type_journalier"
+                               value="journalier">
+                        <label class="form-check-label" for="type_journalier">
+                            Journalier
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Forfait -->
+            <div class="col-12" id="section-forfait">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Forfait</label>
+                        <select name="forfait_id" class="form-select" id="forfait_select">
+                            <option value="">-- Choisir un forfait --</option>
+                            {% for forfait in forfaits %}
+                            <option value="{{ forfait.id }}"
+                                    data-prix="{{ forfait.prix_mensuel }}">
+                                {{ forfait.nom }} —
+                                {{ "{:,.0f}".format(forfait.prix_mensuel) }} FCFA/mois
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Nombre de mois</label>
+                        <input type="number" name="nombre_mois" class="form-control"
+                               id="nombre_mois" min="1" value="1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Remise (%)</label>
+                        <div class="input-group">
+                            <input type="number" name="remise" class="form-control"
+                                   id="remise" min="0" max="100" value="0">
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="bloc_motif_remise" style="display:none;">
+                        <label class="form-label">Motif de la remise</label>
+                        <input type="text" name="motif_remise" class="form-control"
+                               placeholder="Ex: Fidelite, Promotion...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Montant brut</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control"
+                                   id="montant_total" readonly>
+                            <span class="input-group-text">FCFA</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Montant apres remise</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control"
+                                   id="montant_apres_remise" readonly>
+                            <span class="input-group-text">FCFA</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Premier paiement</label>
+                        <div class="input-group">
+                            <input type="number" name="premier_paiement"
+                                   class="form-control" id="premier_paiement"
+                                   placeholder="Minimum 50%" min="0">
+                            <span class="input-group-text">FCFA</span>
+                        </div>
+                        <small class="text-muted" id="info_paiement">
+                            Minimum 50% du montant total.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Journalier -->
+            <div class="col-12" id="section-journalier" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Type d'acces</label>
+                        <select name="type_acces_journalier" class="form-select"
+                                id="acces_journalier">
+                            <option value="salle">
+                                Salle uniquement —
+                                {{ "{:,.0f}".format(prix_journalier_simple) }} FCFA
+                            </option>
+                            <option value="fitness">
+                                Fitness uniquement —
+                                {{ "{:,.0f}".format(prix_journalier_simple) }} FCFA
+                            </option>
+                            <option value="salle+fitness">
+                                Salle + Fitness —
+                                {{ "{:,.0f}".format(prix_journalier_complet) }} FCFA
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Prix journalier</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control"
+                                   id="prix_journalier" readonly>
+                            <span class="input-group-text">FCFA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode de paiement -->
+            <div class="col-md-4">
+                <label class="form-label">Mode de paiement</label>
+                <select name="mode_paiement" class="form-select"
+                        id="mode_paiement" required>
+                    {% for value, label in modes_paiement %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Date de début libre -->
+            <div class="col-md-4">
+                <label class="form-label">Date de debut</label>
+                <input type="date" name="date_debut" class="form-control"
+                       id="date_debut"
+                       value="{{ aujourd_hui }}" required>
+                <small class="text-muted">
+                    La date de fin sera calculee automatiquement.
+                </small>
+            </div>
+
+            <!-- Date de fin calculée -->
+            <div class="col-md-4" id="bloc_date_fin" style="display:none;">
+                <label class="form-label">Date de fin estimee</label>
+                <input type="text" class="form-control" id="date_fin_estimee" readonly>
+            </div>
+
+            <!-- Champs Mobile Money -->
+            <div class="col-12" id="bloc_mobile_money" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            Numero ayant effectue le transfert
+                        </label>
+                        <input type="text" name="numero_mobile" class="form-control"
+                               placeholder="Ex: +22607000000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Reference de la transaction</label>
+                        <input type="text" name="reference_transaction"
+                               class="form-control" placeholder="Ex: TXN123456789">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="col-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-dark">Enregistrer</button>
+                    <a href="{{ url_for('abonnements.liste') }}"
+                       class="btn btn-outline-secondary">Annuler</a>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<script>
+const prixSimple = {{ prix_journalier_simple }};
+const prixComplet = {{ prix_journalier_complet }};
+
+// ── Recherche dynamique membres ──
+let timer = null;
+document.getElementById('recherche_membre').addEventListener('input', function() {
+    clearTimeout(timer);
+    const q = this.value.trim();
+    if (q.length < 2) {
+        document.getElementById('suggestions_membres').style.display = 'none';
+        return;
+    }
+    timer = setTimeout(() => {
+        fetch('/abonnements/recherche-membres?q=' + encodeURIComponent(q))
+            .then(r => r.json())
+            .then(data => {
+                const box = document.getElementById('suggestions_membres');
+                box.innerHTML = '';
+                if (data.length === 0) {
+                    box.style.display = 'none';
+                    return;
+                }
+                data.forEach(m => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'list-group-item list-group-item-action';
+                    item.textContent = m.prenom + ' ' + m.nom +
+                        (m.telephone ? ' — ' + m.telephone : '');
+                    item.addEventListener('click', function() {
+                        document.getElementById('recherche_membre').value =
+                            m.prenom + ' ' + m.nom;
+                        document.getElementById('membre_id').value = m.id;
+                        box.style.display = 'none';
+                    });
+                    box.appendChild(item);
+                });
+                box.style.display = 'block';
+            });
+    }, 300);
+});
+
+// Fermer suggestions si clic ailleurs
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#recherche_membre') &&
+        !e.target.closest('#suggestions_membres')) {
+        document.getElementById('suggestions_membres').style.display = 'none';
+    }
+});
+
+// ── Calcul montant forfait ──
+function majMontantForfait() {
+    const select = document.getElementById('forfait_select');
+    const option = select.options[select.selectedIndex];
+    const prix = parseFloat(option.getAttribute('data-prix')) || 0;
+    const mois = parseInt(document.getElementById('nombre_mois').value) || 1;
+    const remise = parseFloat(document.getElementById('remise').value) || 0;
+    const total_brut = prix * mois;
+    const montant_remise = total_brut * remise / 100;
+    const total_net = total_brut - montant_remise;
+    const moitie = total_net / 2;
+
+    document.getElementById('montant_total').value =
+        total_brut > 0 ? total_brut.toLocaleString('fr-FR') : '';
+    document.getElementById('montant_apres_remise').value =
+        total_net > 0 ? total_net.toLocaleString('fr-FR') : '';
+
+    if (total_net > 0) {
+        document.getElementById('premier_paiement').min = moitie;
+        document.getElementById('info_paiement').innerHTML =
+            'Minimum requis : <strong>' + moitie.toLocaleString('fr-FR') +
+            ' FCFA</strong> (50% de ' + total_net.toLocaleString('fr-FR') + ' FCFA)';
+    }
+
+    document.getElementById('bloc_motif_remise').style.display =
+        remise > 0 ? 'block' : 'none';
+
+    majDateFin();
+}
+
+// ── Calcul date de fin ──
+function majDateFin() {
+    const dateDebut = document.getElementById('date_debut').value;
+    const mois = parseInt(document.getElementById('nombre_mois').value) || 1;
+    const typeAb = document.querySelector('input[name="type_abonnement"]:checked').value;
+
+    if (!dateDebut) return;
+
+    const d = new Date(dateDebut);
+
+    if (typeAb === 'forfait') {
+        d.setDate(d.getDate() + (30 * mois));
+        document.getElementById('date_fin_estimee').value =
+            d.toLocaleDateString('fr-FR');
+        document.getElementById('bloc_date_fin').style.display = 'block';
+    } else {
+        document.getElementById('bloc_date_fin').style.display = 'none';
+    }
+}
+
+document.getElementById('forfait_select').addEventListener('change', majMontantForfait);
+document.getElementById('nombre_mois').addEventListener('input', majMontantForfait);
+document.getElementById('remise').addEventListener('input', majMontantForfait);
+document.getElementById('date_debut').addEventListener('change', majDateFin);
+
+// ── Basculer forfait / journalier ──
+document.querySelectorAll('input[name="type_abonnement"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const estForfait = this.value === 'forfait';
+        document.getElementById('section-forfait').style.display =
+            estForfait ? 'block' : 'none';
+        document.getElementById('section-journalier').style.display =
+            estForfait ? 'none' : 'block';
+        document.getElementById('bloc_date_fin').style.display =
+            estForfait ? 'block' : 'none';
+        if (!estForfait) majPrixJournalier();
+        else majDateFin();
+    });
+});
+
+// ── Prix journalier ──
+function majPrixJournalier() {
+    const acces = document.getElementById('acces_journalier').value;
+    const prix = acces === 'salle+fitness' ? prixComplet : prixSimple;
+    document.getElementById('prix_journalier').value = prix.toLocaleString('fr-FR');
+}
+document.getElementById('acces_journalier').addEventListener('change', majPrixJournalier);
+majPrixJournalier();
+
+// ── Mobile Money ──
+function majModePaiement() {
+    const mode = document.getElementById('mode_paiement').value;
+    document.getElementById('bloc_mobile_money').style.display =
+        mode !== 'especes' ? 'block' : 'none';
+}
+document.getElementById('mode_paiement').addEventListener('change', majModePaiement);
+</script>
+{% endblock %}

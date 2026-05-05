@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Nouveau forfait{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">➕ Nouveau forfait</h2>
+<div class="card p-4 shadow-sm" style="max-width: 600px;">
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Nom du forfait</label>
+            <input type="text" name="nom" class="form-control"
+                   placeholder="Ex: Forfait Bronze, Forfait Gold..." required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Type d'accès</label>
+            <select name="type_acces" class="form-select" required>
+                <option value="">-- Choisir --</option>
+                <option value="salle">Salle uniquement</option>
+                <option value="fitness">Fitness uniquement</option>
+                <option value="salle+fitness">Salle + Fitness</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Prix mensuel (FCFA)</label>
+            <div class="input-group">
+                <input type="number" name="prix_mensuel" class="form-control"
+                       placeholder="Ex: 20000" required>
+                <span class="input-group-text">FCFA / mois</span>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description (optionnel)</label>
+            <textarea name="description" class="form-control" rows="2"
+                      placeholder="Ex: Accès illimité à la salle de musculation"></textarea>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Enregistrer</button>
+            <a href="{{ url_for('forfaits.liste') }}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Gym Manager{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📊 Tableau de bord</h2>
+
+<!-- Statistiques -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card text-white bg-dark text-center p-3">
+            <h1 class="display-4 fw-bold">{{ total_membres }}</h1>
+            <p class="mb-0">Membres actifs</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success text-center p-3">
+            <h1 class="display-4 fw-bold">{{ abonnements_actifs }}</h1>
+            <p class="mb-0">Abonnements en cours</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-warning text-center p-3">
+            <h1 class="display-4 fw-bold">{{ expirations|length }}</h1>
+            <p class="mb-0">Expirations dans 7 jours</p>
+        </div>
+    </div>
+</div>
+
+<!-- Histogramme -->
+<div class="card p-4 shadow-sm mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">📈 Abonnes par mois</h5>
+        <form method="GET" class="d-flex gap-2 align-items-center">
+            <label class="form-label mb-0">Annee :</label>
+            <select name="annee" class="form-select form-select-sm"
+                    style="width: auto;" onchange="this.form.submit()">
+                {% for a in annees %}
+                <option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    <canvas id="histogramme" height="100"></canvas>
+</div>
+
+<!-- Alertes expiration -->
+{% if expirations %}
+<h4 class="mb-3">⚠️ Abonnements expirant bientot</h4>
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Membre</th>
+            <th>Type</th>
+            <th>Expire le</th>
+            <th>Jours restants</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ab in expirations %}
+        <tr class="table-warning">
+            <td>{{ ab.membre.prenom }} {{ ab.membre.nom }}</td>
+            <td>{{ ab.type_abonnement }}</td>
+            <td>{{ ab.date_fin.strftime('%d/%m/%Y') }}</td>
+            <td>
+                <span class="badge bg-warning text-dark">
+                    {{ ab.jours_restants }} jours
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('histogramme').getContext('2d');
+
+const mois = [
+    'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'
+];
+
+const donnees = {{ donnees_mois | tojson }};
+
+const couleurs = donnees.map(v => v > 0 ? 'rgba(220, 53, 69, 0.8)' : 'rgba(200, 200, 200, 0.4)');
+const bordures = donnees.map(v => v > 0 ? 'rgba(220, 53, 69, 1)' : 'rgba(180, 180, 180, 0.6)');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: mois,
+        datasets: [{
+            label: 'Nombre d\'abonnes {{ annee }}',
+            data: donnees,
+            backgroundColor: couleurs,
+            borderColor: bordures,
+            borderWidth: 2,
+            borderRadius: 6,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y + ' abonne(s)';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+                title: {
+                    display: true,
+                    text: 'Nombre d\'abonnes'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Mois'
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

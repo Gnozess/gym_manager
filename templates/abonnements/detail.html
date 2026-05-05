@@ -1,0 +1,508 @@
+{% extends 'base.html' %}
+{% block title %}Detail abonnement{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📄 Detail de l'abonnement</h2>
+    <a href="{{ url_for('abonnements.liste') }}" class="btn btn-outline-secondary">← Retour</a>
+</div>
+
+<div class="row g-4">
+    <!-- Infos abonnement -->
+    <div class="col-md-6">
+        <div class="card p-4 shadow-sm h-100">
+            <h5 class="mb-3">ℹ️ Informations</h5>
+            <table class="table table-borderless">
+                <tr>
+                    <td class="text-muted">Membre</td>
+                    <td><strong>{{ abonnement.membre.prenom }} {{ abonnement.membre.nom }}</strong></td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Type</td>
+                    <td>
+                        {% if abonnement.type_abonnement == 'journalier' %}
+                            <span class="badge bg-secondary">Journalier</span>
+                        {% else %}
+                            <span class="badge bg-dark">Forfait {{ abonnement.nombre_mois }} mois</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Acces</td>
+                    <td>
+                        {% if abonnement.type_acces == 'salle' %}
+                            <span class="badge bg-primary">Salle uniquement</span>
+                        {% elif abonnement.type_acces == 'fitness' %}
+                            <span class="badge bg-info text-dark">Fitness uniquement</span>
+                        {% else %}
+                            <span class="badge bg-success">Salle + Fitness</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if abonnement.type_abonnement == 'forfait' %}
+                <tr>
+                    <td class="text-muted">Forfait</td>
+                    <td>{{ abonnement.forfait.nom }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Prix/mois</td>
+                    <td>{{ "{:,.0f}".format(abonnement.prix_mensuel) }} FCFA</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td class="text-muted">Debut</td>
+                    <td>{{ abonnement.date_debut.strftime('%d/%m/%Y') }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Fin</td>
+                    <td>{{ abonnement.date_fin.strftime('%d/%m/%Y') }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Statut</td>
+                    <td>
+                        {% if abonnement.statut == 'annule' %}
+                            <span class="badge bg-secondary">Annule</span>
+                        {% elif abonnement.est_expire %}
+                            <span class="badge bg-danger">Expire</span>
+                        {% elif abonnement.expire_bientot %}
+                            <span class="badge bg-warning text-dark">
+                                ⚠️ {{ abonnement.jours_restants }} jours restants
+                            </span>
+                        {% else %}
+                            <span class="badge bg-success">Actif</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Bouton annulation -->
+           {% if not current_user.est_membre %}
+           {% if abonnement.statut == 'actif' and not abonnement.est_expire
+            and abonnement.type_abonnement == 'forfait' %}
+            <button class="btn btn-outline-danger btn-sm mt-2"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalAnnuler"
+                    data-remboursement="{{ abonnement.montant_remboursement|int }}">
+                ✖️ Annuler l'abonnement
+            </button>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Suivi paiements -->
+    <div class="col-md-6">
+        <div class="card p-4 shadow-sm h-100">
+            <h5 class="mb-3">💰 Suivi des paiements</h5>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Montant total</span>
+                <strong>{{ "{:,.0f}".format(abonnement.montant_total) }} FCFA</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Total paye</span>
+                <strong class="text-success">
+                    {{ "{:,.0f}".format(abonnement.montant_paye) }} FCFA
+                </strong>
+            </div>
+            <div class="d-flex justify-content-between mb-3">
+                <span class="text-muted">Reste a payer</span>
+                <strong class="{{ 'text-danger' if abonnement.reste_a_payer > 0 else 'text-success' }}">
+                    {{ "{:,.0f}".format(abonnement.reste_a_payer) }} FCFA
+                    {% if abonnement.est_solde %}✅{% endif %}
+                </strong>
+            </div>
+
+            <!-- Barre de progression -->
+            {% set progression = (abonnement.montant_paye / abonnement.montant_total * 100)|int %}
+            <div class="progress mb-4" style="height: 10px;">
+                <div class="progress-bar bg-success" style="width: {{ progression }}%"></div>
+            </div>
+
+            <!-- Bouton ajouter paiement -->
+            {% if abonnement.reste_a_payer > 0 and abonnement.type_abonnement == 'forfait'
+               and abonnement.statut == 'actif' %}
+            <button class="btn btn-success btn-sm w-100"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalPaiement"
+                    data-reste="{{ abonnement.reste_a_payer|int }}">
+                ➕ Ajouter une tranche
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Historique des paiements -->
+<div class="card p-4 shadow-sm mt-4">
+    <h5 class="mb-3">🧾 Historique des paiements</h5>
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for paiement in abonnement.paiements %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ paiement.date_paiement.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td><strong>{{ "{:,.0f}".format(paiement.montant) }} FCFA</strong></td>
+                <td>{{ paiement.note or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Aucun paiement enregistre.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Remboursement -->
+{% if abonnement.remboursement %}
+<div class="card p-4 shadow-sm mt-4 border-warning">
+    <h5 class="mb-3">💸 Remboursement effectue</h5>
+    <table class="table table-borderless">
+        <tr>
+            <td class="text-muted">Montant rembourse</td>
+            <td>
+                <strong class="text-warning">
+                    {{ "{:,.0f}".format(abonnement.remboursement[0].montant_rembourse) }} FCFA
+                </strong>
+            </td>
+        </tr>
+        <tr>
+            <td class="text-muted">Date</td>
+            <td>
+                {{ abonnement.remboursement[0].date_remboursement.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+        </tr>
+        <tr>
+            <td class="text-muted">Motif</td>
+            <td>{{ abonnement.remboursement[0].motif }}</td>
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+{% if abonnement.remise %}
+<div class="card p-4 shadow-sm mt-4 border-info">
+    <h5 class="mb-3">🎁 Remise accordee</h5>
+    <table class="table table-borderless">
+        <tr>
+            <td class="text-muted">Montant brut</td>
+            <td><strong>{{ "{:,.0f}".format(abonnement.montant_brut) }} FCFA</strong></td>
+        </tr>
+        <tr>
+            <td class="text-muted">Remise</td>
+            <td>
+                <strong class="text-info">
+                    {{ abonnement.remise[0].pourcentage|int }}%
+                    — {{ "{:,.0f}".format(abonnement.remise[0].montant_remise) }} FCFA
+                </strong>
+            </td>
+        </tr>
+        <tr>
+            <td class="text-muted">Montant final</td>
+            <td><strong>{{ "{:,.0f}".format(abonnement.montant_total) }} FCFA</strong></td>
+        </tr>
+        <tr>
+            <td class="text-muted">Motif</td>
+            <td>{{ abonnement.remise[0].motif }}</td>
+        </tr>
+        <tr>
+            <td class="text-muted">Date</td>
+            <td>{{ abonnement.remise[0].date_remise.strftime('%d/%m/%Y %H:%M') }}</td>
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+<!-- Modal Paiement -->
+<div class="modal fade" id="modalPaiement" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">➕ Ajouter une tranche de paiement</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST"
+                  action="{{ url_for('abonnements.ajouter_paiement', id=abonnement.id) }}">
+                <div class="modal-body">
+    <div class="mb-3">
+        <label class="form-label">Reste a payer</label>
+        <div class="input-group">
+            <input type="text" class="form-control" id="affiche_reste" readonly>
+            <span class="input-group-text">FCFA</span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Montant a payer</label>
+        <div class="input-group">
+            <input type="number" name="montant" class="form-control"
+                   id="input_montant" min="1" required>
+            <span class="input-group-text">FCFA</span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Mode de paiement</label>
+        <select name="mode_paiement" class="form-select"
+                id="modal_mode_paiement" required>
+            {% for value, label in modes_paiement %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div id="modal_bloc_mobile" style="display:none;">
+        <div class="mb-3">
+            <label class="form-label">Numero ayant effectue le transfert</label>
+            <input type="text" name="numero_mobile" class="form-control"
+                   placeholder="Ex: 07 00 00 00 00">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Reference de la transaction</label>
+            <input type="text" name="reference_transaction" class="form-control"
+                   placeholder="Ex: TXN123456789">
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Note (optionnel)</label>
+        <input type="text" name="note" class="form-control"
+               placeholder="Ex: 2eme tranche">
+    </div>
+</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Annulation -->
+<div class="modal fade" id="modalAnnuler" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">⚠️ Confirmer l'annulation</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Etes-vous sur de vouloir annuler cet abonnement ?</p>
+                <div class="alert alert-warning">
+                    <strong>Remboursement a effectuer :</strong>
+                    <span id="affiche_remboursement" class="fs-5 fw-bold"></span> FCFA
+                </div>
+                <p class="text-muted small">
+                    Ce montant est calcule au prorata des jours restants
+                    en fonction du montant encaisse.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">Retour</button>
+                <form method="POST"
+                      action="{{ url_for('abonnements.annuler', id=abonnement.id) }}">
+                    <button type="submit" class="btn btn-danger">
+                        Confirmer l'annulation
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Modal paiement — afficher le reste a payer
+document.getElementById('modalPaiement').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    const reste = btn.getAttribute('data-reste');
+    document.getElementById('affiche_reste').value =
+        parseFloat(reste).toLocaleString('fr-FR');
+    document.getElementById('input_montant').max = reste;
+});
+
+// Modal annulation — afficher le remboursement
+document.getElementById('modalAnnuler').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    const remboursement = btn.getAttribute('data-remboursement');
+    document.getElementById('affiche_remboursement').textContent =
+        parseFloat(remboursement).toLocaleString('fr-FR');
+});
+document.getElementById('modal_mode_paiement').addEventListener('change', function() {
+    const bloc = document.getElementById('modal_bloc_mobile');
+    bloc.style.display = this.value !== 'especes' ? 'block' : 'none';
+});
+</script>
+{% if qr_code %}
+<!-- Carte abonne - visible uniquement a l'impression -->
+<div class="card p-4 shadow-sm mt-4 border-success" id="section-carte">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">🪪 Carte d'abonne</h5>
+        <button onclick="imprimerCarte()" class="btn btn-dark btn-sm">
+            🖨️ Imprimer la carte
+        </button>
+    </div>
+
+    <!-- Carte -->
+    <div id="carte-abonne" style="
+    width: 340px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid {{ '#dc3545' if abonnement.statut == 'annule' else '#dc3545' }};
+    font-family: Arial, sans-serif;
+    background: white;
+    margin: 0 auto;
+    position: relative;
+">
+    <!-- Filigrane Annule -->
+    {% if abonnement.statut == 'annule' %}
+    <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-35deg);
+        font-size: 48px;
+        font-weight: 900;
+        color: rgba(220, 53, 69, 0.25);
+        white-space: nowrap;
+        z-index: 10;
+        pointer-events: none;
+        letter-spacing: 4px;
+        border: 6px solid rgba(220, 53, 69, 0.25);
+        padding: 4px 12px;
+        border-radius: 8px;
+    ">
+        ANNULE
+    </div>
+    {% endif %}
+
+    <!-- Filigrane Expire -->
+    {% if abonnement.est_expire and abonnement.statut != 'annule' %}
+    <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-35deg);
+        font-size: 48px;
+        font-weight: 900;
+        color: rgba(108, 117, 125, 0.25);
+        white-space: nowrap;
+        z-index: 10;
+        pointer-events: none;
+        letter-spacing: 4px;
+        border: 6px solid rgba(108, 117, 125, 0.25);
+        padding: 4px 12px;
+        border-radius: 8px;
+    ">
+        EXPIRE
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div style="background: #dc3545; padding: 12px; text-align: center;">
+        <img src="{{ url_for('static', filename='logo.jpeg') }}"
+             style="height: 60px; border-radius: 50%;">
+        <p style="color: white; margin: 4px 0 0; font-weight: bold; font-size: 13px;">
+            Centre de Fitness Raguilio
+        </p>
+        <p style="color: #ffcccc; margin: 0; font-size: 11px;">
+            Carte d'abonne
+        </p>
+    </div>
+
+    <!-- Corps -->
+    <div style="padding: 12px 16px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 1;">
+                <p style="margin: 4px 0; font-size: 12px; color: #666;">N° Abonne</p>
+                <p style="margin: 0 0 8px; font-weight: bold; font-size: 14px; color: #dc3545;">
+                    #{{ "%05d"|format(abonnement.id) }}
+                </p>
+                <p style="margin: 2px 0; font-size: 11px; color: #666;">Nom complet</p>
+                <p style="margin: 0 0 6px; font-weight: bold; font-size: 13px;">
+                    {{ abonnement.membre.prenom }} {{ abonnement.membre.nom }}
+                </p>
+                <p style="margin: 2px 0; font-size: 11px; color: #666;">Forfait</p>
+                <p style="margin: 0 0 6px; font-size: 12px;">
+                    {{ abonnement.forfait.nom if abonnement.forfait else 'Journalier' }}
+                </p>
+                <p style="margin: 2px 0; font-size: 11px; color: #666;">Acces</p>
+                <p style="margin: 0 0 6px; font-size: 12px;">
+                    {{ abonnement.type_acces | capitalize }}
+                </p>
+                <p style="margin: 2px 0; font-size: 11px; color: #666;">Periode</p>
+                <p style="margin: 0; font-size: 12px;">
+                    {{ abonnement.date_debut.strftime('%d/%m/%Y') }}
+                    →
+                    {{ abonnement.date_fin.strftime('%d/%m/%Y') }}
+                </p>
+            </div>
+            <!-- QR Code -->
+            <div style="text-align: center; margin-left: 12px;">
+                <img src="data:image/png;base64,{{ qr_code }}"
+                     style="width: 90px; height: 90px;">
+                <p style="margin: 2px 0 0; font-size: 9px; color: #999;">
+                    Scanner pour verifier
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #212529; padding: 6px; text-align: center;">
+        <p style="color: #aaa; margin: 0; font-size: 10px;">
+            {% if abonnement.statut == 'annule' %}
+                <strong style="color: #dc3545;">ABONNEMENT ANNULE</strong>
+            {% elif abonnement.est_expire %}
+                <strong style="color: #aaa;">ABONNEMENT EXPIRE</strong>
+            {% else %}
+                Valide jusqu'au
+                <strong style="color: white;">
+                    {{ abonnement.date_fin.strftime('%d/%m/%Y') }}
+                </strong>
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<style>
+@media print {
+    body * { visibility: hidden !important; }
+    #zone-impression, #zone-impression * { visibility: visible !important; }
+    #zone-impression {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+}
+</style>
+
+<div id="zone-impression" style="display:none;">
+    <div id="carte-impression"></div>
+</div>
+
+<script>
+function imprimerCarte() {
+    const carte = document.getElementById('carte-abonne').innerHTML;
+    document.getElementById('carte-impression').innerHTML = carte;
+    document.getElementById('zone-impression').style.display = 'flex';
+    window.print();
+    document.getElementById('zone-impression').style.display = 'none';
+}
+</script>
+{% endif %}
+{% endblock %}

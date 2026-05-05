@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% block title %}Forfaits — Gym Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🎯 Forfaits</h2>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAjouter">
+        + Nouveau forfait
+    </button>
+</div>
+
+<!-- Tableau des forfaits -->
+<h5 class="mb-3">📦 Forfaits mensuels</h5>
+<table class="table table-hover table-bordered mb-5">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Acces</th>
+            <th>Prix/mois</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for forfait in forfaits %}
+        <tr>
+            <td><strong>{{ forfait.nom }}</strong></td>
+            <td>
+                {% if forfait.type_acces == 'salle' %}
+                    <span class="badge bg-primary">Salle uniquement</span>
+                {% elif forfait.type_acces == 'fitness' %}
+                    <span class="badge bg-info text-dark">Fitness uniquement</span>
+                {% elif forfait.type_acces == 'sculpt+prepa' %}
+                    <span class="badge bg-info text-white">Sculpte/prépa</span>
+                {% else %}
+                    <span class="badge bg-success">Salle + Fitness</span>
+                {% endif %}
+            </td>
+            <td><strong>{{ "{:,.0f}".format(forfait.prix_mensuel) }} FCFA</strong></td>
+            <td>{{ forfait.description or '—' }}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-dark"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalModifier"
+                        data-id="{{ forfait.id }}"
+                        data-nom="{{ forfait.nom }}"
+                        data-acces="{{ forfait.type_acces }}"
+                        data-prix="{{ forfait.prix_mensuel|int }}"
+                        data-description="{{ forfait.description or '' }}">
+                    ✏️
+                </button>
+                <form method="POST"
+                      action="{{ url_for('forfaits.supprimer', id=forfait.id) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('Supprimer ce forfait ?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5" class="text-center text-muted">Aucun forfait cree.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Prix journaliers -->
+<h5 class="mb-3">📅 Tarifs journaliers</h5>
+<div class="card p-4 shadow-sm" style="max-width: 500px;">
+    <form method="POST" action="{{ url_for('forfaits.config_journalier') }}">
+        <div class="mb-3">
+            <label class="form-label">Salle ou Fitness (prix/jour)</label>
+            <div class="input-group">
+                <input type="number" name="journalier_simple" class="form-control"
+                       value="{{ prix_journalier_simple|int }}" required>
+                <span class="input-group-text">FCFA</span>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Salle + Fitness (prix/jour)</label>
+            <div class="input-group">
+                <input type="number" name="journalier_complet" class="form-control"
+                       value="{{ prix_journalier_complet|int }}" required>
+                <span class="input-group-text">FCFA</span>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-dark">Mettre a jour</button>
+    </form>
+</div>
+
+
+<!-- Modal Ajouter -->
+<div class="modal fade" id="modalAjouter" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">➕ Nouveau forfait</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('forfaits.ajouter') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nom du forfait</label>
+                        <input type="text" name="nom" class="form-control"
+                               placeholder="Ex: Forfait Bronze, Forfait Gold..."
+                               required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Prestations</label>
+                        <select name="type_acces" class="form-select" id="mod_acces" required>
+                            <option value="salle">Salle machine</option>
+                            <option value="fitness">Fitness(Cours collectifs)</option>
+                            <option value="salle+fitness">Salle + Fitness</option>
+                            <option value="sculpt+prepa">Sculpt specifique / preparation physique</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Prix mensuel (FCFA)</label>
+                        <div class="input-group">
+                            <input type="number" name="prix_mensuel" class="form-control"
+                                   placeholder="Ex: 20000" required>
+                            <span class="input-group-text">FCFA / mois</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (optionnel)</label>
+                        <textarea name="description" class="form-control" rows="2"
+                                  placeholder="Ex: Acces illimite a la salle de musculation">
+                        </textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-dark">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Modifier -->
+<div class="modal fade" id="modalModifier" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">✏️ Modifier le forfait</h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="formModifier">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nom du forfait</label>
+                        <input type="text" name="nom" id="mod_nom"
+                               class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Prestations</label>
+                        <select name="type_acces" class="form-select" id="mod_acces" required>
+                            <option value="salle">Salle machine</option>
+                            <option value="fitness">Fitness(Cours collectifs)</option>
+                            <option value="salle+fitness">Salle + Fitness</option>
+                            <option value="sculpt+prepa">Sculpt specifique / preparation physique</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Prix mensuel (FCFA)</label>
+                        <div class="input-group">
+                            <input type="number" name="prix_mensuel" id="mod_prix"
+                                   class="form-control" required>
+                            <span class="input-group-text">FCFA / mois</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (optionnel)</label>
+                        <textarea name="description" id="mod_description"
+                                  class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-dark">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+document.getElementById('modalModifier').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    const id = btn.getAttribute('data-id');
+    const nom = btn.getAttribute('data-nom');
+    const acces = btn.getAttribute('data-acces');
+    const prix = btn.getAttribute('data-prix');
+    const description = btn.getAttribute('data-description');
+
+    document.getElementById('mod_nom').value = nom;
+    document.getElementById('mod_acces').value = acces;
+    document.getElementById('mod_prix').value = prix;
+    document.getElementById('mod_description').value = description;
+
+    document.getElementById('formModifier').action =
+        '/forfaits/modifier/' + id;
+});
+</script>
+{% endblock %}

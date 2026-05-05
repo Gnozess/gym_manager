@@ -62,6 +62,7 @@
                 <option value="fitness" {{ 'selected' if filtre_acces == 'fitness' }}>
                     Fitness
                 </option>
+                
                 <option value="salle+fitness"
                         {{ 'selected' if filtre_acces == 'salle+fitness' }}>
                     Salle + Fitness
@@ -107,13 +108,23 @@
                     <span class="badge bg-dark">{{ ab.nombre_mois }} mois</span>
                 {% endif %}
             </td>
-            <td>
-                {% if ab.type_acces == 'salle' %}
+           <td>
+                {% if abonnement.type_acces == 'salle' %}
                     <span class="badge bg-primary">Salle</span>
-                {% elif ab.type_acces == 'fitness' %}
-                    <span class="badge bg-info text-dark">Fitness</span>
+                {% elif abonnement.type_acces == 'fitness' %}
+                    <span class="badge bg-primary">Fitness</span>
+                {% elif abonnement.type_acces == 'mixte' %}
+                    <span class="badge bg-primary">Salle+Fitness</span>
+                {% elif abonnement.type_acces == 'sp' %}
+                    <span class="badge bg-primary">Sculpte/prépa</span>
+                {% elif abonnement.type_acces == 'salle+suivi' %}
+                    <span class="badge bg-primary">Salle+suivis</span>
+                {% elif abonnement.type_acces == 'fitness+suivi' %}
+                    <span class="badge bg-primary">Fitness+suivis</span>
+                {% elif abonnement.type_acces == 'mixte+suivi' %}
+                    <span class="badge bg-primary">Salle+Fitness+Suivis</span>
                 {% else %}
-                    <span class="badge bg-success">Salle + Fitness</span>
+                    <span class="badge bg-primary">Sculpte/prépa+suivis</span>
                 {% endif %}
             </td>
             <td>{{ "{:,.0f}".format(ab.montant_total) }} FCFA</td>

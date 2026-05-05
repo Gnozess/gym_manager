@@ -27,13 +27,21 @@
             <td><strong>{{ forfait.nom }}</strong></td>
             <td>
                 {% if forfait.type_acces == 'salle' %}
-                    <span class="badge bg-primary">Salle uniquement</span>
+                    <span class="badge bg-primary">Salle</span>
                 {% elif forfait.type_acces == 'fitness' %}
-                    <span class="badge bg-info text-dark">Fitness uniquement</span>
-                {% elif forfait.type_acces == 'sculpt+prepa' %}
-                    <span class="badge bg-info text-white">Sculpte/prépa</span>
+                    <span class="badge bg-primary">Fitness</span>
+                {% elif forfait.type_acces == 'mixte' %}
+                    <span class="badge bg-primary">Salle+Fitness</span>
+                {% elif forfait.type_acces == 'sp' %}
+                    <span class="badge bg-primary">Sculpte/prépa</span>
+                {% elif forfait.type_acces == 'salle+suivi' %}
+                    <span class="badge bg-primary">Salle+suivis</span>
+                {% elif forfait.type_acces == 'fitness+suivi' %}
+                    <span class="badge bg-primary">Fitness+suivis</span>
+                {% elif forfait.type_acces == 'mixte+suivi' %}
+                    <span class="badge bg-primary">Salle+Fitness+Suivis</span>
                 {% else %}
-                    <span class="badge bg-success">Salle + Fitness</span>
+                    <span class="badge bg-primary">Sculpte/prépa+suivis</span>
                 {% endif %}
             </td>
             <td><strong>{{ "{:,.0f}".format(forfait.prix_mensuel) }} FCFA</strong></td>

@@ -8,22 +8,27 @@
         <div class="mb-3">
             <label class="form-label">Nom du forfait</label>
             <input type="text" name="nom" class="form-control"
-                   placeholder="Ex: Forfait Bronze, Forfait Gold..." required>
+                   placeholder="Ex: STD-Salle machine, AT-Salle machine..." required>
         </div>
         <div class="mb-3">
             <label class="form-label">Type d'accès</label>
             <select name="type_acces" class="form-select" required>
                 <option value="">-- Choisir --</option>
-                <option value="salle">Salle uniquement</option>
-                <option value="fitness">Fitness uniquement</option>
-                <option value="salle+fitness">Salle + Fitness</option>
+                <option value="salle">Salle</option>
+                <option value="fitness">Fitness</option>
+                <option value="mixte">Mixte(Salle+Fitness)</option>
+                <option value="sp">Sculpte/Préparation physique</option>
+                <option value="salle+suivi">Salle+suivis</option>
+                <option value="fitness+suivi">Fitness+suivis</option>
+                <option value="mixte+suivi">Mixte+suivis</option>
+                <option value="sp+suivi">Sculpte/Prépa+suivis</option>
             </select>
         </div>
         <div class="mb-3">
             <label class="form-label">Prix mensuel (FCFA)</label>
             <div class="input-group">
                 <input type="number" name="prix_mensuel" class="form-control"
-                       placeholder="Ex: 20000" required>
+                       placeholder="Ex: 20 000" maxlength="6" required>
                 <span class="input-group-text">FCFA / mois</span>
             </div>
         </div>

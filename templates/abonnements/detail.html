@@ -30,13 +30,23 @@
                 <tr>
                     <td class="text-muted">Acces</td>
                     <td>
-                        {% if abonnement.type_acces == 'salle' %}
-                            <span class="badge bg-primary">Salle uniquement</span>
-                        {% elif abonnement.type_acces == 'fitness' %}
-                            <span class="badge bg-info text-dark">Fitness uniquement</span>
-                        {% else %}
-                            <span class="badge bg-success">Salle + Fitness</span>
-                        {% endif %}
+                    {% if abonnement.type_acces == 'salle' %}
+                        <span class="badge bg-primary">Salle</span>
+                    {% elif abonnement.type_acces == 'fitness' %}
+                        <span class="badge bg-primary">Fitness</span>
+                    {% elif abonnement.type_acces == 'mixte' %}
+                        <span class="badge bg-primary">Salle+Fitness</span>
+                    {% elif abonnement.type_acces == 'sp' %}
+                        <span class="badge bg-primary">Sculpte/prépa</span>
+                    {% elif abonnement.type_acces == 'salle+suivi' %}
+                        <span class="badge bg-primary">Salle+suivis</span>
+                    {% elif abonnement.type_acces == 'fitness+suivi' %}
+                        <span class="badge bg-primary">Fitness+suivis</span>
+                    {% elif abonnement.type_acces == 'mixte+suivi' %}
+                        <span class="badge bg-primary">Salle+Fitness+Suivis</span>
+                    {% else %}
+                        <span class="badge bg-primary">Sculpte/prépa+suivis</span>
+                    {% endif %}
                     </td>
                 </tr>
                 {% if abonnement.type_abonnement == 'forfait' %}

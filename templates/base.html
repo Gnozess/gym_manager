@@ -21,19 +21,19 @@
         {% if not current_user.est_membre %}
         <!-- Menus admin et secretaire uniquement -->
         <a href="{{ url_for('membres.dashboard') }}"
-           class="text-white text-decoration-none">Dashboard</a>
+           class="text-white text-decoration-none">DASHBOARD</a>
         <a href="{{ url_for('membres.liste') }}"
-           class="text-white text-decoration-none">Membres</a>
+           class="text-white text-decoration-none">MEMBRES</a>
         <a href="{{ url_for('abonnements.liste') }}"
-           class="text-white text-decoration-none">Abonnements</a>
+           class="text-white text-decoration-none">ABONNEMENTS</a>
 
         {% if current_user.est_admin %}
         <a href="{{ url_for('forfaits.liste') }}"
-           class="text-white text-decoration-none">Forfaits</a>
+           class="text-white text-decoration-none">FORFAITS</a>
         <a href="{{ url_for('caisse.index') }}"
-           class="text-white text-decoration-none">Caisse</a>
+           class="text-white text-decoration-none">CAISSE</a>
         <a href="{{ url_for('utilisateurs.liste') }}"
-           class="text-white text-decoration-none">Utilisateurs</a>
+           class="text-white text-decoration-none">UTILISATEURS</a>
         {% endif %}
 
         {% if alertes_count > 0 %}
@@ -49,7 +49,7 @@
         <div class="dropdown">
             <a class="text-white text-decoration-none dropdown-toggle" href="#"
                data-bs-toggle="dropdown">
-                {{ current_user.nom }}
+                {{ current_user.nom }}-{{ current_user.prenom }}
                 <span class="badge bg-secondary">{{ current_user.role_label }}</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">

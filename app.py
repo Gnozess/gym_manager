@@ -6,7 +6,7 @@ import os
 def create_app():
     app = Flask(__name__)
 
-    # Corriger l'URL PostgreSQL de :contentReference[oaicite:0]{index=0}
+    # Correction URL PostgreSQL Render
     db_url = os.environ.get('DATABASE_URL', '')
     if db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
@@ -22,21 +22,30 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return Admin.query.get(int(user_id))
+        try:
+            return Admin.query.get(int(user_id))
+        except:
+            return None
 
     @app.context_processor
     def inject_context():
         from flask_login import current_user
         alertes_count = 0
+
         if current_user.is_authenticated:
-            from models.abonnement import Abonnement
-            from datetime import date
-            alertes_count = Abonnement.query.filter(
-                Abonnement.statut == 'actif',
-                Abonnement.date_fin >= date.today(),
-                Abonnement.date_fin <= date.fromordinal(
-                    date.today().toordinal() + 7)
-            ).count()
+            try:
+                from models.abonnement import Abonnement
+                from datetime import date
+
+                alertes_count = Abonnement.query.filter(
+                    Abonnement.statut == 'actif',
+                    Abonnement.date_fin >= date.today(),
+                    Abonnement.date_fin <= date.fromordinal(
+                        date.today().toordinal() + 7)
+                ).count()
+            except:
+                alertes_count = 0
+
         return {
             'alertes_count': alertes_count,
             'current_user': current_user
@@ -57,23 +66,29 @@ def create_app():
     app.register_blueprint(caisse_bp)
     app.register_blueprint(utilisateurs_bp)
 
-    # 🔥 INIT DB + ADMIN COMPATIBLE AVEC TON LOGIN
+    # 🔥 INIT DB + ADMIN SÉCURISÉ
     from werkzeug.security import generate_password_hash
 
     with app.app_context():
         db.create_all()
 
-        # Création admin si inexistant
-        if not Admin.query.filter_by(email="admin@gmail.com").first():
-            admin = Admin(
-                email="admin@gmail.com",
-                nom="Admin",
-                actif=True,
-                est_membre=False,
-                password=generate_password_hash("admin123")
-            )
-            db.session.add(admin)
-            db.session.commit()
+        try:
+            # Vérifier si admin existe
+            admin = Admin.query.filter_by(email="admin@gmail.com").first()
+
+            if not admin:
+                admin = Admin(
+                    email="admin@gmail.com",
+                    nom="Admin",
+                    actif=True,
+                    est_membre=False,
+                    password=generate_password_hash("admin123")
+                )
+                db.session.add(admin)
+                db.session.commit()
+
+        except Exception as e:
+            print("Erreur création admin :", e)
 
     return app
 

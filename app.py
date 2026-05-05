@@ -42,6 +42,7 @@ def create_app():
             'current_user': current_user
         }
 
+    # Import des routes
     from routes.auth import auth_bp
     from routes.membres import membres_bp
     from routes.abonnements import abonnements_bp
@@ -49,6 +50,7 @@ def create_app():
     from routes.caisse import caisse_bp
     from routes.utilisateurs import utilisateurs_bp
 
+    # Enregistrement des blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(membres_bp)
     app.register_blueprint(abonnements_bp)
@@ -56,15 +58,24 @@ def create_app():
     app.register_blueprint(caisse_bp)
     app.register_blueprint(utilisateurs_bp)
 
-    # ✅ CORRECTION ICI (indentation)
+    # 🔥 INITIALISATION BASE + ADMIN
+    from werkzeug.security import generate_password_hash
+
     with app.app_context():
         db.create_all()
+
+        # Création d'un admin par défaut (si inexistant)
+        if not Admin.query.filter_by(username="admin").first():
+            admin = Admin(
+                username="admin",
+                password=generate_password_hash("admin123")
+            )
+            db.session.add(admin)
+            db.session.commit()
 
     return app
 
 
 if __name__ == '__main__':
     app = create_app()
-    with app.app_context():
-        db.create_all()
     app.run(debug=False)

@@ -56,6 +56,8 @@ def create_app():
     app.register_blueprint(caisse_bp)
     app.register_blueprint(utilisateurs_bp)
 
+    with app.app_context():
+    db.create_all()
     return app
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import os
 def create_app():
     app = Flask(__name__)
 
-    # Correction URL PostgreSQL Render
+    # Correction URL PostgreSQL (Render)
     db_url = os.environ.get('DATABASE_URL', '')
     if db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
@@ -22,10 +22,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        try:
-            return Admin.query.get(int(user_id))
-        except:
-            return None
+        return Admin.query.get(int(user_id))
 
     @app.context_processor
     def inject_context():
@@ -51,7 +48,7 @@ def create_app():
             'current_user': current_user
         }
 
-    # Import routes
+    # Routes
     from routes.auth import auth_bp
     from routes.membres import membres_bp
     from routes.abonnements import abonnements_bp
@@ -66,24 +63,22 @@ def create_app():
     app.register_blueprint(caisse_bp)
     app.register_blueprint(utilisateurs_bp)
 
-    # 🔥 INIT DB + ADMIN SÉCURISÉ
-    from werkzeug.security import generate_password_hash
-
+    # 🔥 INIT DB + ADMIN CORRIGÉ
     with app.app_context():
         db.create_all()
 
         try:
-            # Vérifier si admin existe
             admin = Admin.query.filter_by(email="admin@gmail.com").first()
 
             if not admin:
                 admin = Admin(
+                    nom="Administrateur",
                     email="admin@gmail.com",
-                    nom="Admin",
-                    actif=True,
-                    est_membre=False,
-                    password=generate_password_hash("admin123")
+                    role="admin",
+                    actif=True
                 )
+                admin.set_password("admin123")  # ✅ TRÈS IMPORTANT
+
                 db.session.add(admin)
                 db.session.commit()
 
